@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>ক্যালকুলেটর ও বাজার লিস্ট</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000; --text:#ffffff; --text-dim:#9a9a9a; --divider:#2b2b2b;
+    --key-bg:#000000; --key-text:#ffffff; --op-bg:#ffffff; --op-text:#000000;
+    --section-bg:#d6d6d6; --section-text:#111111; --accent:#3a7bfd; --money:#4FAE8C;
+    --topbtn-border:#ffffff; --danger:#e05a45; --key-shadow:rgba(0,0,0,0.45);
+  }
+  [data-theme="light"]{
+    --bg:#ffffff; --text:#111111; --text-dim:#6b6b6b; --divider:#e2e2e2;
+    --key-bg:#ffffff; --key-text:#111111; --op-bg:#111111; --op-text:#ffffff;
+    --section-bg:#ececec; --section-text:#111111; --money:#1F5C4E; --topbtn-border:#111111;
+    --key-shadow:rgba(0,0,0,0.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{margin:0;min-height:100dvh;background:#111;font-family:'Hind Siliguri', sans-serif;display:flex;justify-content:center;overflow:hidden;}
+  .app{width:100%;max-width:480px;min-height:100dvh;background:var(--bg);color:var(--text);display:flex;flex-direction:column;position:relative;}
+  @media (min-width:481px){
+    body{padding:18px 0;overflow:auto;background:#111;}
+    .app{min-height:96vh;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+  }
+  .tabs-content{flex:1 1 auto;min-height:0;position:relative;}
+  .tab-panel{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;visibility:hidden;pointer-events:none;transition:opacity 0.18s ease;}
+  .tab-panel.active{opacity:1;visibility:visible;pointer-events:auto;}
+
+  .topbar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;box-shadow:0 1px 0 var(--divider);}
+  .topbar h1{font-family:'Baloo Da 2', sans-serif;font-weight:800;font-size:19px;margin:0;letter-spacing:0.5px;}
+  .topbtns{display:flex;gap:8px;}
+  .topbtn{display:flex;align-items:center;gap:5px;background:transparent;border:1.5px solid var(--topbtn-border);color:var(--text);border-radius:8px;padding:7px 10px;font-family:'Hind Siliguri', sans-serif;font-weight:600;font-size:12px;cursor:pointer;}
+
+  .bottom-nav{flex:0 0 auto;display:flex;gap:6px;background:#ffffff;box-shadow:0 -1px 8px rgba(0,0,0,0.06);padding:8px 8px calc(6px + env(safe-area-inset-bottom));}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;background:none;border:none;border-radius:14px;font-size:11px;color:#9a9a9a;font-family:'Hind Siliguri', sans-serif;font-weight:600;cursor:pointer;transition:background 0.15s ease, color 0.15s ease;}
+  .nav-item .icon{font-size:21px;transition:transform 0.15s ease;}
+  .nav-item.active{color:var(--accent);background:rgba(58,123,253,0.10);}
+  .nav-item.active .icon{transform:translateY(-1px);}
+  .nav-item:active{transform:scale(0.96);}
+
+  /* ================= CALCULATOR ================= */
+  .screen{flex:0 0 auto;padding:20px 18px 16px;min-height:96px;display:flex;flex-direction:column;justify-content:flex-end;}
+  .screen .prev{font-family:'Share Tech Mono', monospace;font-size:18px;color:var(--text-dim);text-align:right;min-height:22px;overflow-x:auto;white-space:nowrap;}
+  .screen .current{font-family:'Share Tech Mono', monospace;font-weight:700;font-size:40px;text-align:right;overflow-x:auto;white-space:nowrap;}
+  .keys{flex:1 1 auto;display:grid;grid-template-columns:repeat(4, 1fr);grid-template-rows:repeat(5, 1fr);gap:9px;padding:10px 10px 4px;min-height:0;}
+  .key{border:none;border-radius:14px;display:flex;align-items:center;justify-content:center;min-height:40px;font-family:'Hind Siliguri', sans-serif;font-weight:700;font-size:21px;cursor:pointer;background:var(--key-bg);color:var(--key-text);box-shadow:0 2px 6px var(--key-shadow);transition:transform 0.08s ease, opacity 0.08s ease;}
+  .key:active{opacity:0.75;transform:scale(0.94);}
+  .key.op{background:var(--op-bg);color:var(--op-text);}
+  .key.func{font-size:15px;letter-spacing:0.5px;}
+  .hist-bar{flex:0 0 auto;margin:6px 10px 12px;border:none;border-radius:14px;background:var(--op-bg);color:var(--op-text);font-family:'Baloo Da 2', sans-serif;font-weight:700;font-size:15px;letter-spacing:0.5px;padding:13px;cursor:pointer;box-shadow:0 2px 6px var(--key-shadow);transition:transform 0.08s ease, opacity 0.08s ease;}
+  .hist-bar:active{transform:scale(0.98);opacity:0.85;}
+
+  .history{position:absolute;inset:0;background:var(--bg);color:var(--text);display:flex;flex-direction:column;transform:translateY(100%);transition:transform 0.25s ease;z-index:5;}
+  .history.open{transform:translateY(0);}
+  .hist-scroll{flex:1 1 auto;overflow-y:auto;padding-bottom:20px;}
+  .day-header{display:flex;justify-content:space-between;align-items:center;background:var(--section-bg);color:var(--section-text);padding:9px 16px;}
+  .day-header .dh-label{font-family:'Hind Siliguri', sans-serif;font-weight:700;font-size:13px;letter-spacing:0.5px;}
+  .day-header .dh-count{font-size:12px;color:#555;margin-top:1px;}
+  .day-header .dh-right{text-align:right;}
+  .day-header .dh-total-label{font-size:11px;color:#555;}
+  .day-header .dh-total-val{font-family:'Share Tech Mono', monospace;font-weight:700;font-size:17px;}
+  .hist-entry{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--divider);cursor:pointer;}
+  .hist-entry .he-expr{font-family:'Share Tech Mono', monospace;font-size:20px;color:var(--text-dim);}
+  .hist-entry .he-result{font-family:'Share Tech Mono', monospace;font-weight:700;font-size:28px;margin-top:3px;}
+  .hist-entry .he-time{font-family:'Share Tech Mono', monospace;font-size:12px;color:var(--text-dim);white-space:nowrap;}
+  .hist-empty, .list-empty, .sum-empty{padding:60px 20px;text-align:center;color:var(--text-dim);font-size:15px;}
+
+  /* ================= BAZAR LIST ================= */
+  .memo-subtabs{flex:0 0 auto;display:flex;gap:6px;padding:12px 16px 0;}
+  .memo-subtab{flex:1;font-family:'Baloo Da 2', sans-serif;font-weight:700;font-size:12px;padding:9px 4px;border:1.5px solid var(--divider);border-radius:10px;background:transparent;color:var(--text-dim);cursor:pointer;transition:all 0.15s ease;}
+  .memo-subtab.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 8px rgba(58,123,253,0.3);}
+  .memo-body{flex:1 1 auto;overflow-y:auto;padding:14px 16px 24px;}
+
+  .date-add-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:6px;}
+  .date-add-row .df{flex:1;}
+  .date-add-row label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;}
+  .date-add-row input[type=date]{width:100%;font-family:'Hind Siliguri', sans-serif;font-size:16px;padding:9px 4px;border:none;border-bottom:1.5px solid var(--divider);background:transparent;color:var(--text);}
+  .add-sq-btn{width:44px;height:44px;flex:0 0 auto;border:2px solid var(--accent);border-radius:12px;background:transparent;color:var(--accent);font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.08s ease, background 0.15s ease;}
+  .add-sq-btn:active{transform:scale(0.92);background:rgba(58,123,253,0.12);}
+  .day-chip{display:inline-block;margin-top:5px;font-size:12px;font-weight:700;color:var(--money);font-family:'Baloo Da 2', sans-serif;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;}
+  .field input[type=text]{width:100%;font-family:'Hind Siliguri', sans-serif;font-size:16px;padding:9px 4px;border:none;border-bottom:1.5px solid var(--divider);background:transparent;color:var(--text);}
+  .field input:focus{outline:none;border-bottom-color:var(--accent);}
+
+  .items-title{font-family:'Baloo Da 2', sans-serif;font-weight:700;font-size:14px;color:var(--text-dim);margin:16px 0 8px;letter-spacing:0.5px;}
+  .item-line{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;}
+  .item-line input.iname{flex:1.4;font-family:'Hind Siliguri', sans-serif;font-size:16px;padding:6px 2px;border:none;border-bottom:1.5px dashed var(--divider);background:transparent;color:var(--text);}
+  .item-line input.iqty{flex:1;font-family:'Hind Siliguri', sans-serif;font-size:14px;color:var(--text-dim);padding:6px 2px;border:none;border-bottom:1.5px dashed var(--divider);background:transparent;}
+  .item-line input.iamt{flex:1;font-family:'Share Tech Mono', monospace;font-size:16px;text-align:right;padding:6px 2px;border:none;border-bottom:1.5px dashed var(--divider);background:transparent;color:var(--text);}
+  .item-line input:focus{outline:none;border-bottom-color:var(--accent);}
+  .rm-line{background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;flex:0 0 auto;padding:4px;}
+
+  .add-item-row{display:flex;align-items:center;gap:10px;padding:6px 0 16px;cursor:pointer;}
+  .add-item-row .dash-line{flex:1;border-bottom:2px dashed var(--divider);}
+  .add-item-row .plus-btn{width:30px;height:30px;border-radius:50%;border:2px solid var(--accent);color:var(--accent);background:transparent;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;transition:transform 0.08s ease;}
+  .add-item-row:active .plus-btn{transform:scale(0.9);}
+
+  .total-row{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 16px;padding-top:12px;border-top:2px solid var(--text);}
+  .total-row .lbl{font-family:'Baloo Da 2', sans-serif;font-weight:700;}
+  .total-row .val{font-family:'Share Tech Mono', monospace;font-weight:700;font-size:22px;color:var(--money);}
+  .save-btn{width:100%;font-family:'Baloo Da 2', sans-serif;font-weight:700;font-size:16px;padding:13px;border:none;border-radius:14px;background:var(--money);color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(79,174,140,0.35);transition:transform 0.08s ease, opacity 0.08s ease;}
+  .save-btn:active{opacity:0.88;transform:scale(0.98);}
+  .draft-note{font-size:11px;color:var(--text-dim);text-align:center;margin-bottom:10px;}
+  .clear-form-link{display:block;text-align:center;font-size:12px;color:var(--text-dim);text-decoration:underline;background:none;border:none;margin:0 0 14px;cursor:pointer;width:100%;}
+
+  .filter-bar{margin-bottom:12px;}
+  .filter-bar select{width:100%;font-family:'Hind Siliguri', sans-serif;font-size:14px;padding:9px 8px;border:1.5px solid var(--divider);border-radius:8px;background:transparent;color:var(--text);}
+  .memo-card{border:1px solid var(--divider);border-radius:16px;padding:14px 16px;margin-bottom:14px;box-shadow:0 3px 10px var(--key-shadow);}
+  .mc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;}
+  .mc-date{font-family:'Baloo Da 2', sans-serif;font-weight:700;font-size:14px;}
+  .mc-time{font-family:'Share Tech Mono', monospace;font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+  .mc-person{display:inline-block;margin-bottom:6px;font-size:11px;font-weight:700;background:var(--section-bg);color:var(--section-text);padding:2px 9px;border-radius:20px;}
+  table.mc-table{width:100%;border-collapse:collapse;font-size:14px;}
+  table.mc-table td{padding:3px 2px;border-bottom:1px dashed var(--divider);}
+  table.mc-table td.num{text-align:right;white-space:nowrap;font-family:'Share Tech Mono', monospace;}
+  table.mc-table tr:last-child td{border-bottom:none;}
+  .mc-total{display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1.5px solid var(--divider);font-family:'Baloo Da 2', sans-serif;font-weight:700;}
+  .mc-total .val{color:var(--money);font-family:'Share Tech Mono', monospace;}
+  .mc-del{background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;flex:0 0 auto;}
+
+  .sum-toggle{flex:0 0 auto;display:flex;gap:8px;margin-bottom:14px;}
+  .sum-toggle button{flex:1;font-family:'Baloo Da 2', sans-serif;font-weight:700;font-size:12px;padding:9px 4px;border:1.5px solid var(--divider);border-radius:10px;background:transparent;color:var(--text-dim);cursor:pointer;transition:all 0.15s ease;}
+  .sum-toggle button.active{background:var(--money);border-color:var(--money);color:#fff;box-shadow:0 3px 8px rgba(79,174,140,0.3);}
+  .sum-row{margin-bottom:16px;}
+  .sum-row .sr-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
+  .sum-row .sr-label{color:var(--text-dim);}
+  .sum-row .sr-amt{font-family:'Share Tech Mono', monospace;font-weight:700;}
+  .sum-bar-track{height:10px;background:var(--divider);border-radius:6px;overflow:hidden;}
+  .sum-bar-fill{height:100%;background:var(--money);border-radius:6px;transition:width 0.4s ease;}
+
+  /* ================= SETTINGS ================= */
+  .settings-body{flex:1 1 auto;overflow-y:auto;padding:16px;}
+  .set-row{display:flex;justify-content:space-between;align-items:center;padding:16px 4px;border-bottom:1px solid var(--divider);}
+  .set-row .sr-title{font-family:'Hind Siliguri', sans-serif;font-weight:600;font-size:15px;}
+  .set-row .sr-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .switch{width:46px;height:26px;border-radius:14px;background:var(--divider);border:none;position:relative;cursor:pointer;flex:0 0 auto;transition:background 0.18s ease;}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:left 0.18s ease;}
+  .switch.on{background:var(--accent);}
+  .switch.on::after{left:23px;}
+  .danger-btn{width:100%;text-align:left;background:none;border:none;color:var(--danger);font-family:'Hind Siliguri', sans-serif;font-size:15px;font-weight:600;padding:16px 4px;border-bottom:1px solid var(--divider);cursor:pointer;}
+  .set-note{font-size:12px;color:var(--text-dim);padding:14px 4px;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="tabs-content">
+
+    <!-- ===== CALCULATOR ===== -->
+    <section class="tab-panel active" id="tab-calc">
+      <div class="topbar"><h1>ক্যালকুলেটর</h1></div>
+      <div class="screen">
+        <div class="prev" id="prev-line">&nbsp;</div>
+        <div class="current" id="current-line">০</div>
+      </div>
+      <div class="keys">
+        <button class="key func" data-action="clear">AC</button>
+        <button class="key func" data-action="backspace">⌫ DEL</button>
+        <button class="key func" data-action="percent">%</button>
+        <button class="key op" data-action="op" data-op="÷">÷</button>
+        <button class="key" data-action="digit" data-val="7">৭</button>
+        <button class="key" data-action="digit" data-val="8">৮</button>
+        <button class="key" data-action="digit" data-val="9">৯</button>
+        <button class="key op" data-action="op" data-op="×">×</button>
+        <button class="key" data-action="digit" data-val="4">৪</button>
+        <button class="key" data-action="digit" data-val="5">৫</button>
+        <button class="key" data-action="digit" data-val="6">৬</button>
+        <button class="key op" data-action="op" data-op="−">−</button>
+        <button class="key" data-action="digit" data-val="1">১</button>
+        <button class="key" data-action="digit" data-val="2">২</button>
+        <button class="key" data-action="digit" data-val="3">৩</button>
+        <button class="key op" data-action="op" data-op="+">+</button>
+        <button class="key" data-action="digit" data-val="00">০০</button>
+        <button class="key" data-action="digit" data-val="0">০</button>
+        <button class="key" data-action="decimal">.</button>
+        <button class="key op" data-action="equals">=</button>
+      </div>
+      <button class="hist-bar" id="open-history">🗒 হিস্টোরি</button>
+
+      <div class="history" id="history">
+        <div class="topbar">
+          <h1>হিস্টোরি</h1>
+          <div class="topbtns">
+            <button class="topbtn" id="undo-last">↺ আনডু</button>
+            <button class="topbtn" id="close-history">✕ বন্ধ</button>
+          </div>
+        </div>
+        <div class="hist-scroll" id="hist-scroll">
+          <div id="hist-groups"></div>
+          <div class="hist-empty" id="hist-empty">এখনও কোনো হিসাব নেই</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== BAZAR LIST ===== -->
+    <section class="tab-panel" id="tab-memo">
+      <div class="topbar"><h1>বাজার লিস্ট</h1></div>
+      <div class="memo-subtabs">
+        <button class="memo-subtab active" data-sub="new">নতুন</button>
+        <button class="memo-subtab" data-sub="all">সব হিসাব</button>
+        <button class="memo-subtab" data-sub="summary">সারাংশ</button>
+      </div>
+
+      <div class="memo-body" id="memo-new-body">
+        <div class="date-add-row">
+          <div class="df">
+            <label>তারিখ</label>
+            <input type="date" id="m-date">
+            <div class="day-chip" id="m-day"></div>
+          </div>
+          <button class="add-sq-btn" id="add-line" title="নতুন জিনিস যোগ করুন">+</button>
+        </div>
+
+        <div class="field" style="margin-top:14px;">
+          <label>ব্যক্তি / নাম (ঐচ্ছিক)</label>
+          <input type="text" id="m-person" list="person-list" placeholder="যেমন: আব্বু">
+          <datalist id="person-list"></datalist>
+        </div>
+
+        <div class="items-title">জিনিসপত্র</div>
+        <div id="item-lines"></div>
+
+        <div class="total-row">
+          <span class="lbl">মোট</span>
+          <span class="val" id="m-total">০ টাকা</span>
+        </div>
+        <button class="save-btn" id="save-entry">সংরক্ষণ করুন</button>
+        <div class="draft-note" id="draft-note">&nbsp;</div>
+        <button class="clear-form-link" id="clear-form">লিস্ট খালি করে নতুন শুরু করুন</button>
+      </div>
+
+      <div class="memo-body" id="memo-all-body" style="display:none;">
+        <div class="filter-bar">
+          <select id="filter-person"><option value="">সব ব্যক্তি</option></select>
+        </div>
+        <div id="all-groups"></div>
+        <div class="list-empty" id="all-empty" style="display:none;">এখনও কোনো হিসাব সংরক্ষণ করা হয়নি।</div>
+      </div>
+
+      <div class="memo-body" id="memo-summary-body" style="display:none;">
+        <div class="sum-toggle">
+          <button class="active" data-range="week">সাপ্তাহিক</button>
+          <button data-range="month">মাসিক</button>
+          <button data-range="year">বাৎসরিক</button>
+        </div>
+        <div id="summary-list"></div>
+        <div class="sum-empty" id="summary-empty" style="display:none;">হিসাব যোগ করলে এখানে সারাংশ দেখা যাবে।</div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section class="tab-panel" id="tab-settings">
+      <div class="topbar"><h1>সেটিং</h1></div>
+      <div class="settings-body">
+        <div class="set-row">
+          <div><div class="sr-title">ডার্ক মোড</div><div class="sr-sub">কালো/সাদা থিম বদলান</div></div>
+          <button class="switch on" id="theme-switch"></button>
+        </div>
+        <button class="danger-btn" id="clear-calc-history">ক্যালকুলেটরের হিস্টোরি মুছুন</button>
+        <button class="danger-btn" id="clear-memo-all">বাজার লিস্টের সব হিসাব মুছুন</button>
+        <div class="set-note">আপনার সব হিসাব এই ডিভাইসে নিরাপদে সংরক্ষিত থাকে, অ্যাপ বন্ধ করলেও হারাবে না।</div>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="calc"><span class="icon">🧮</span><span>ক্যালকুলেটর</span></button>
+    <button class="nav-item" data-tab="memo"><span class="icon">🧾</span><span>বাজার লিস্ট</span></button>
+    <button class="nav-item" data-tab="settings"><span class="icon">⚙️</span><span>সেটিং</span></button>
+  </nav>
+</div>
+
+<script>
+const BN_DIGIT = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+const MONTH_NAMES = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+const DAY_NAMES = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
+const DEFAULT_ITEMS = [
+  {name:'মাছ', qty:'কেজি', amt:''},
+  {name:'মাংস', qty:'কেজি', amt:''},
+  {name:'সবজি', qty:'কেজি', amt:''},
+  {name:'তেল', qty:'লিটার', amt:''},
+  {name:'মসলা', qty:'কেজি', amt:''}
+];
+function bn(str){ return String(str).replace(/[0-9]/g, d => BN_DIGIT[d] !== undefined ? BN_DIGIT[d] : d); }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function uid(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function dateKey(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dayLabelFromTs(ts){
+  const d=new Date(ts); const t=new Date(); const y=new Date(); y.setDate(t.getDate()-1);
+  const key=dateKey(ts);
+  if(key===dateKey(t.getTime())) return 'আজ';
+  if(key===dateKey(y.getTime())) return 'গতকাল';
+  return bn(d.getDate())+' '+MONTH_NAMES[d.getMonth()]+', '+bn(d.getFullYear());
+}
+function timeLabel(ts){ const d=new Date(ts); return bn(String(d.getHours()).padStart(2,'0'))+':'+bn(String(d.getMinutes()).padStart(2,'0')); }
+function fmtDateBn(dateStr){ const [y,m,d]=dateStr.split('-'); return bn(d)+'-'+bn(m)+'-'+bn(y); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------------- THEME ---------------- */
+const THEME_KEY='app:theme';
+async function setTheme(light){
+  document.getElementById('app').setAttribute('data-theme', light?'light':'');
+  document.getElementById('theme-switch').classList.toggle('on', !light);
+  try{ await window.storage.set(THEME_KEY, light?'light':'dark', false); }catch(e){}
+}
+document.getElementById('theme-switch').addEventListener('click', ()=>{
+  const isLight = document.getElementById('app').getAttribute('data-theme')==='light';
+  setTheme(!isLight);
+});
+async function loadTheme(){
+  try{
+    const res=await window.storage.get(THEME_KEY,false);
+    setTheme(res && res.value==='light');
+  }catch(e){ setTheme(false); }
+}
+
+/* ---------------- NAV ---------------- */
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ================= CALCULATOR ================= */
+const CALC_KEY='calculator:history';
+let tokens=[]; let current='0'; let justEvaluated=false; let history=[];
+const currentEl=document.getElementById('current-line');
+const prevEl=document.getElementById('prev-line');
+const isOperator = s => ['+','−','×','÷'].includes(s);
+function formatNum(n){
+  if(n===''||n===null||n===undefined) return '০';
+  let s=String(n);
+  if(s.length>12){ const num=parseFloat(s); s=num.toPrecision(8).replace(/\.?0+$/,'').replace(/\.?0+e/,'e'); }
+  return bn(s);
+}
+function updateScreen(){
+  currentEl.textContent=formatNum(current);
+  prevEl.textContent = tokens.length ? bn(tokens.join(' ')) : '\u00A0';
+}
+function inputDigit(d){
+  if(justEvaluated){ current=(d==='00'?'0':d); justEvaluated=false; }
+  else if(current==='0'){ current=(d==='00'?'0':d); }
+  else { current=current+d; }
+  updateScreen();
+}
+function inputDecimal(){
+  if(justEvaluated){ current='0.'; justEvaluated=false; updateScreen(); return; }
+  if(!current.includes('.')) current+='.';
+  updateScreen();
+}
+function backspace(){
+  if(justEvaluated) return;
+  if(current.length>1){ current=current.slice(0,-1); }
+  else if(tokens.length>0){ tokens.pop(); current=tokens.pop(); }
+  else { current='0'; }
+  updateScreen();
+}
+function clearAll(){ tokens=[]; current='0'; justEvaluated=false; updateScreen(); }
+function percent(){ current=String(parseFloat(current||'0')/100); updateScreen(); }
+function chooseOp(op){
+  if(tokens.length && isOperator(tokens[tokens.length-1]) && current==='0' && !justEvaluated){ tokens[tokens.length-1]=op; }
+  else { tokens.push(current); tokens.push(op); current='0'; }
+  justEvaluated=false; updateScreen();
+}
+function trimNum(n){ if(Number.isInteger(n)) return String(n); return String(parseFloat(n.toFixed(6))); }
+function compute(){
+  if(tokens.length===0) return;
+  tokens.push(current);
+  let result=parseFloat(tokens[0]);
+  let exprParts=[trimNum(result)];
+  for(let i=1;i<tokens.length;i+=2){
+    const op=tokens[i]; const num=parseFloat(tokens[i+1]);
+    exprParts.push(op, trimNum(num));
+    if(op==='+') result+=num; else if(op==='−') result-=num; else if(op==='×') result*=num;
+    else if(op==='÷') result = num===0 ? NaN : result/num;
+  }
+  const exprText=exprParts.join(' ');
+  const resultText=isNaN(result)?'ভুল':trimNum(result);
+  addHistory(exprText, resultText);
+  tokens=[]; current=isNaN(result)?'0':resultText; justEvaluated=true;
+  updateScreen();
+}
+function addHistory(expr,result){
+  history.unshift({expr,result,ts:Date.now(),id:uid('h')});
+  if(history.length>300) history=history.slice(0,300);
+  renderHistory(); saveCalc();
+}
+function renderHistory(){
+  const groupsEl=document.getElementById('hist-groups');
+  const emptyEl=document.getElementById('hist-empty');
+  if(history.length===0){ groupsEl.innerHTML=''; emptyEl.style.display='block'; return; }
+  emptyEl.style.display='none';
+  const groups={}; const order=[];
+  history.forEach(h=>{ const key=dateKey(h.ts); if(!groups[key]){groups[key]=[]; order.push(key);} groups[key].push(h); });
+  order.sort().reverse();
+  groupsEl.innerHTML=order.map(key=>{
+    const items=groups[key];
+    const total=items.reduce((s,i)=> s+(i.result==='ভুল'?0:parseFloat(i.result)),0);
+    const label=dayLabelFromTs(items[0].ts);
+    const entriesHtml=items.map(it=>`
+      <div class="hist-entry" data-result="${it.result}">
+        <div><div class="he-expr">${bn(it.expr)} =</div><div class="he-result">${bn(it.result)}</div></div>
+        <div class="he-time">${timeLabel(it.ts)}</div>
+      </div>`).join('');
+    return `
+      <div class="day-header">
+        <div><div class="dh-label">${label.toUpperCase()}</div><div class="dh-count">${bn(items.length)} টি হিসাব</div></div>
+        <div class="dh-right"><div class="dh-total-label">মোট</div><div class="dh-total-val">${bn(Math.round(total*100)/100)}</div></div>
+      </div>
+      ${entriesHtml}`;
+  }).join('');
+  groupsEl.querySelectorAll('.hist-entry').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const r=el.dataset.result; if(r==='ভুল') return;
+      tokens=[]; current=r; justEvaluated=true; updateScreen(); closeHistory();
+    });
+  });
+}
+async function loadCalc(){
+  try{ const res=await window.storage.get(CALC_KEY,false); history= res&&res.value?JSON.parse(res.value):[]; }
+  catch(e){ history=[]; }
+  renderHistory();
+}
+async function saveCalc(){ try{ await window.storage.set(CALC_KEY, JSON.stringify(history), false); }catch(e){} }
+document.querySelectorAll('#tab-calc .key').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const action=btn.dataset.action;
+    if(action==='digit') inputDigit(btn.dataset.val);
+    else if(action==='decimal') inputDecimal();
+    else if(action==='backspace') backspace();
+    else if(action==='clear') clearAll();
+    else if(action==='percent') percent();
+    else if(action==='op') chooseOp(btn.dataset.op);
+    else if(action==='equals') compute();
+  });
+});
+const historyEl=document.getElementById('history');
+function openHistory(){ historyEl.classList.add('open'); }
+function closeHistory(){ historyEl.classList.remove('open'); }
+document.getElementById('open-history').addEventListener('click', openHistory);
+document.getElementById('close-history').addEventListener('click', closeHistory);
+document.getElementById('undo-last').addEventListener('click', async ()=>{
+  if(history.length===0) return;
+  history.shift(); renderHistory(); await saveCalc();
+});
+document.addEventListener('keydown', (e)=>{
+  if(!document.getElementById('tab-calc').classList.contains('active')) return;
+  if(e.key>='0'&&e.key<='9') inputDigit(e.key);
+  else if(e.key==='.') inputDecimal();
+  else if(e.key==='Backspace') backspace();
+  else if(e.key==='Escape') clearAll();
+  else if(e.key==='%') percent();
+  else if(e.key==='+') chooseOp('+');
+  else if(e.key==='-') chooseOp('−');
+  else if(e.key==='*') chooseOp('×');
+  else if(e.key==='/'){ e.preventDefault(); chooseOp('÷'); }
+  else if(e.key==='Enter'||e.key==='=') compute();
+});
+
+/* ================= BAZAR LIST ================= */
+const MEMO_KEY='cashmemo:entries';
+const DRAFT_KEY='cashmemo:draft';
+let memos=[];
+let draftTimer=null;
+
+function newLine(name='',qty='',amt=''){
+  const row=document.createElement('div');
+  row.className='item-line';
+  row.innerHTML=`
+    <input type="text" class="iname" placeholder="জিনিসের নাম" value="${escapeHtml(name)}">
+    <input type="text" class="iqty" placeholder="পরিমাণ" value="${escapeHtml(qty)}">
+    <input type="number" class="iamt" placeholder="টাকা" min="0" value="${amt}">
+    <button type="button" class="rm-line">✕</button>`;
+  row.querySelector('.iamt').addEventListener('input', ()=>{ updateMemoTotal(); scheduleDraftSave(); });
+  row.querySelector('.iname').addEventListener('input', scheduleDraftSave);
+  row.querySelector('.iqty').addEventListener('input', scheduleDraftSave);
+  row.querySelector('.rm-line').addEventListener('click', ()=>{ row.remove(); updateMemoTotal(); scheduleDraftSave(); });
+  document.getElementById('item-lines').appendChild(row);
+}
+function updateMemoTotal(){
+  let total=0;
+  document.querySelectorAll('#item-lines .item-line').forEach(row=>{ total += parseFloat(row.querySelector('.iamt').value) || 0; });
+  document.getElementById('m-total').textContent = bn(total)+' টাকা';
+}
+function updateMDay(){
+  const val=document.getElementById('m-date').value;
+  document.getElementById('m-day').textContent = val ? DAY_NAMES[new Date(val+'T00:00:00').getDay()] : '';
+}
+function currentFormData(){
+  const items=[];
+  document.querySelectorAll('#item-lines .item-line').forEach(row=>{
+    items.push({
+      name: row.querySelector('.iname').value,
+      qty: row.querySelector('.iqty').value,
+      amt: row.querySelector('.iamt').value
+    });
+  });
+  return { date: document.getElementById('m-date').value, person: document.getElementById('m-person').value, items };
+}
+function scheduleDraftSave(){
+  clearTimeout(draftTimer);
+  draftTimer=setTimeout(saveDraft, 500);
+}
+async function saveDraft(){
+  try{
+    await window.storage.set(DRAFT_KEY, JSON.stringify(currentFormData()), false);
+    const note=document.getElementById('draft-note');
+    note.textContent='খসড়া সংরক্ষিত হয়েছে ✓';
+    setTimeout(()=>{ note.textContent='\u00A0'; }, 1500);
+  }catch(e){}
+}
+function fillForm(data){
+  document.getElementById('item-lines').innerHTML='';
+  document.getElementById('m-date').value = data.date || today();
+  document.getElementById('m-person').value = data.person || '';
+  updateMDay();
+  const items = (data.items && data.items.length) ? data.items : DEFAULT_ITEMS;
+  items.forEach(it => newLine(it.name, it.qty, it.amt));
+  updateMemoTotal();
+}
+async function loadFormOrDraft(){
+  try{
+    const res=await window.storage.get(DRAFT_KEY, false);
+    if(res && res.value){ fillForm(JSON.parse(res.value)); return; }
+  }catch(e){}
+  fillForm({date: today(), person:'', items: DEFAULT_ITEMS});
+}
+document.getElementById('m-date').addEventListener('change', ()=>{ updateMDay(); scheduleDraftSave(); });
+document.getElementById('m-person').addEventListener('input', scheduleDraftSave);
+document.getElementById('add-line').addEventListener('click', ()=>{ newLine(); scheduleDraftSave(); });
+document.getElementById('clear-form').addEventListener('click', async ()=>{
+  if(!confirm('বর্তমান লিস্ট খালি করে নতুন শুরু করতে চান?')) return;
+  try{ await window.storage.delete(DRAFT_KEY, false); }catch(e){}
+  fillForm({date: today(), person:'', items: DEFAULT_ITEMS});
+});
+
+document.getElementById('save-entry').addEventListener('click', async ()=>{
+  const dateVal=document.getElementById('m-date').value || today();
+  const person=document.getElementById('m-person').value.trim();
+  const rows=[];
+  document.querySelectorAll('#item-lines .item-line').forEach(row=>{
+    const name=row.querySelector('.iname').value.trim();
+    const qty=row.querySelector('.iqty').value.trim();
+    const amt=parseFloat(row.querySelector('.iamt').value)||0;
+    if(name || amt) rows.push({name,qty,amt});
+  });
+  if(rows.length===0) return;
+  memos.unshift({id:uid('m'), date:dateVal, person, items:rows, ts:Date.now()});
+  await saveMemos();
+  try{ await window.storage.delete(DRAFT_KEY, false); }catch(e){}
+  fillForm({date: today(), person:'', items: DEFAULT_ITEMS});
+  renderMemoAll();
+  renderSummary();
+  switchMemoSub('all');
+});
+
+function memoTotal(m){ return m.items.reduce((s,i)=> s+(parseFloat(i.amt)||0),0); }
+function switchMemoSub(name){
+  document.querySelectorAll('.memo-subtab').forEach(b=>b.classList.toggle('active', b.dataset.sub===name));
+  document.getElementById('memo-new-body').style.display = name==='new' ? 'block':'none';
+  document.getElementById('memo-all-body').style.display = name==='all' ? 'block':'none';
+  document.getElementById('memo-summary-body').style.display = name==='summary' ? 'block':'none';
+}
+document.querySelectorAll('.memo-subtab').forEach(b=>b.addEventListener('click', ()=>switchMemoSub(b.dataset.sub)));
+
+function renderPersonOptions(){
+  const names=[...new Set(memos.map(m=>m.person).filter(Boolean))];
+  document.getElementById('person-list').innerHTML = names.map(n=>`<option value="${escapeHtml(n)}">`).join('');
+  const sel=document.getElementById('filter-person'); const cur=sel.value;
+  sel.innerHTML='<option value="">সব ব্যক্তি</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  sel.value=cur;
+}
+function renderMemoAll(){
+  renderPersonOptions();
+  const filterVal=document.getElementById('filter-person').value;
+  const groupsEl=document.getElementById('all-groups');
+  const emptyEl=document.getElementById('all-empty');
+  let list=[...memos].sort((a,b)=> b.ts-a.ts);
+  if(filterVal) list=list.filter(m=>m.person===filterVal);
+  if(list.length===0){ groupsEl.innerHTML=''; emptyEl.style.display='block'; return; }
+  emptyEl.style.display='none';
+  const groups={}; const order=[];
+  list.forEach(m=>{ const key=dateKey(m.ts); if(!groups[key]){groups[key]=[]; order.push(key);} groups[key].push(m); });
+  order.sort().reverse();
+  groupsEl.innerHTML=order.map(key=>{
+    const items=groups[key];
+    const dayTotal=items.reduce((s,m)=>s+memoTotal(m),0);
+    const label=dayLabelFromTs(items[0].ts);
+    const cardsHtml=items.map(m=>{
+      const rowsHtml=m.items.map(it=>`<tr><td>${escapeHtml(it.name)}</td><td class="num">${escapeHtml(it.qty)}</td><td class="num">${bn(it.amt)} টাকা</td></tr>`).join('');
+      return `
+        <div class="memo-card">
+          <div class="mc-head">
+            <div><span class="mc-date">তারিখ: ${fmtDateBn(m.date)}</span> ${m.person?`<span class="mc-person">${escapeHtml(m.person)}</span>`:''}</div>
+            <button class="mc-del" data-id="${m.id}">✕</button>
+          </div>
+          <div class="mc-time">সময়: ${timeLabel(m.ts)}</div>
+          <table class="mc-table">${rowsHtml}</table>
+          <div class="mc-total"><span>মোট</span><span class="val">${bn(memoTotal(m))} টাকা</span></div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="day-header">
+        <div><div class="dh-label">${label.toUpperCase()}</div><div class="dh-count">${bn(items.length)} টি হিসাব</div></div>
+        <div class="dh-right"><div class="dh-total-label">মোট</div><div class="dh-total-val">${bn(dayTotal)}</div></div>
+      </div>
+      <div style="padding-top:10px;">${cardsHtml}</div>`;
+  }).join('');
+  groupsEl.querySelectorAll('.mc-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      memos=memos.filter(m=>m.id!==btn.dataset.id);
+      await saveMemos(); renderMemoAll(); renderSummary();
+    });
+  });
+}
+document.getElementById('filter-person').addEventListener('change', renderMemoAll);
+
+async function loadMemos(){
+  try{ const res=await window.storage.get(MEMO_KEY,false); memos= res&&res.value?JSON.parse(res.value):[]; }
+  catch(e){ memos=[]; }
+  renderMemoAll();
+}
+async function saveMemos(){ try{ await window.storage.set(MEMO_KEY, JSON.stringify(memos), false); }catch(e){} }
+
+/* ---- summary ---- */
+let currentRange='week';
+function weekKey(dateStr){ const d=new Date(dateStr+'T00:00:00'); const start=new Date(d); start.setDate(d.getDate()-d.getDay()); return start.toISOString().slice(0,10); }
+function weekLabel(dateStr){
+  const d=new Date(dateStr+'T00:00:00'); const start=new Date(d); start.setDate(d.getDate()-d.getDay());
+  const end=new Date(start); end.setDate(start.getDate()+6);
+  const f=(x)=> bn(x.getDate())+' '+MONTH_NAMES[x.getMonth()];
+  return f(start)+' – '+f(end)+', '+bn(start.getFullYear());
+}
+document.querySelectorAll('.sum-toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.sum-toggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); currentRange=btn.dataset.range; renderSummary();
+  });
+});
+function renderSummary(){
+  const container=document.getElementById('summary-list');
+  const emptyEl=document.getElementById('summary-empty');
+  if(memos.length===0){ container.innerHTML=''; emptyEl.style.display='block'; return; }
+  emptyEl.style.display='none';
+  const groups={};
+  memos.forEach(m=>{
+    let key,label;
+    if(currentRange==='week'){ key=weekKey(m.date); label=weekLabel(m.date); }
+    else if(currentRange==='month'){ key=m.date.slice(0,7); const [y,mo]=m.date.split('-'); label=MONTH_NAMES[parseInt(mo)-1]+' '+bn(y); }
+    else { key=m.date.slice(0,4); label=bn(m.date.slice(0,4)); }
+    if(!groups[key]) groups[key]={label,total:0};
+    groups[key].total += memoTotal(m);
+  });
+  const rows=Object.entries(groups).sort((a,b)=> b[0].localeCompare(a[0]));
+  const maxTotal=Math.max(...rows.map(r=>r[1].total),1);
+  container.innerHTML=rows.map(([key,g])=>`
+    <div class="sum-row">
+      <div class="sr-top"><span class="sr-label">${g.label}</span><span class="sr-amt">${bn(Math.round(g.total))} টাকা</span></div>
+      <div class="sum-bar-track"><div class="sum-bar-fill" style="width:${Math.round((g.total/maxTotal)*100)}%"></div></div>
+    </div>`).join('');
+}
+
+/* ================= SETTINGS ================= */
+document.getElementById('clear-calc-history').addEventListener('click', async ()=>{
+  if(!confirm('ক্যালকুলেটরের পুরো হিস্টোরি মুছে ফেলতে চান? এটা ফেরত আনা যাবে না।')) return;
+  history=[]; renderHistory(); await saveCalc();
+});
+document.getElementById('clear-memo-all').addEventListener('click', async ()=>{
+  if(!confirm('বাজার লিস্টের সব সংরক্ষিত হিসাব মুছে ফেলতে চান? এটা ফেরত আনা যাবে না।')) return;
+  memos=[]; await saveMemos(); renderMemoAll(); renderSummary();
+});
+
+/* ---------------- INIT ---------------- */
+updateScreen();
+loadTheme();
+loadCalc();
+loadFormOrDraft();
+loadMemos().then(renderSummary);
+</script>
+</body>
+</html>
